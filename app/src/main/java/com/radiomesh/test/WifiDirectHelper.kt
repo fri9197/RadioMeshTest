@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.wifi.WpsInfo
+import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
@@ -64,21 +66,21 @@ class WifiDirectHelper(
     }
 
     fun register() {
-        if (!registered && receiver != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                context.registerReceiver(receiver, intentFilter)
-            }
-            registered = true
+        val r = receiver ?: return
+        if (registered) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(r, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(r, intentFilter)
         }
+        registered = true
     }
 
     fun unregister() {
-        if (registered) {
-            try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
-            registered = false
-        }
+        val r = receiver ?: return
+        if (!registered) return
+        try { context.unregisterReceiver(r) } catch (_: Exception) {}
+        registered = false
     }
 
     @SuppressLint("MissingPermission")
@@ -100,9 +102,9 @@ class WifiDirectHelper(
 
     @SuppressLint("MissingPermission")
     fun connect(device: WifiP2pDevice) {
-        val config = android.net.wifi.p2p.WifiP2pConfig().apply {
+        val config = WifiP2pConfig().apply {
             deviceAddress = device.deviceAddress
-            wps.setup = android.net.wifi.wps.WpsInfo.PBC
+            wps.setup = WpsInfo.PBC
         }
         manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() = onLog("Connect request sent")
