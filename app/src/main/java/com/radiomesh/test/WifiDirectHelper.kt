@@ -32,33 +32,36 @@ class WifiDirectHelper(
     }
 
     fun init() {
-        manager = context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
-        if (manager == null) {
+        val m = context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager?
+        if (m == null) {
             onLog("Wi-Fi Direct پشتیبانی نمی‌شود")
             return
         }
-        channel = manager!!.initialize(context, Looper.getMainLooper()) {
+        manager = m
+        channel = m.initialize(context, Looper.getMainLooper()) {
             onLog("Wi-Fi Direct channel disconnected")
         }
         receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 when (intent?.action) {
                     WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
-                        val enabled = intent.getIntExtra(
+                        val state = intent.getIntExtra(
                             WifiP2pManager.EXTRA_WIFI_STATE,
                             WifiP2pManager.WIFI_P2P_STATE_DISABLED
                         )
-                        onLog("P2P state: ${if (enabled == WifiP2pManager.WIFI_P2P_STATE_ENABLED) "ON" else "OFF"}")
+                        onLog("P2P state: ${if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) "ON" else "OFF"}")
                     }
                     WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         requestPeers()
                     }
                     WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
-                        manager?.requestConnectionInfo(channel, WifiP2pManager.ConnectionInfoListener { info ->
+                        val mgr = manager ?: return
+                        val ch = channel ?: return
+                        mgr.requestConnectionInfo(ch) { info ->
                             onLog("Connection info: formed=${info.groupFormed} owner=${info.isGroupOwner} " +
                                     "ownerIp=${info.groupOwnerAddress?.hostAddress}")
                             onConnectionInfo(info)
-                        })
+                        }
                     }
                 }
             }
@@ -85,15 +88,19 @@ class WifiDirectHelper(
 
     @SuppressLint("MissingPermission")
     fun discoverPeers() {
-        manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() = onLog("Discover started")
-            override fun onFailure(reason: Int) = onLog("Discover failed: $reason")
+        val mgr = manager ?: return
+        val ch = channel ?: return
+        mgr.discoverPeers(ch, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() { onLog("Discover started") }
+            override fun onFailure(reason: Int) { onLog("Discover failed: $reason") }
         })
     }
 
     @SuppressLint("MissingPermission")
     private fun requestPeers() {
-        manager?.requestPeers(channel) { peers ->
+        val mgr = manager ?: return
+        val ch = channel ?: return
+        mgr.requestPeers(ch) { peers ->
             val list = peers.deviceList.toList()
             onLog("Peers: ${list.size}")
             onPeersChanged(list)
@@ -102,29 +109,35 @@ class WifiDirectHelper(
 
     @SuppressLint("MissingPermission")
     fun connect(device: WifiP2pDevice) {
+        val mgr = manager ?: return
+        val ch = channel ?: return
         val config = WifiP2pConfig().apply {
             deviceAddress = device.deviceAddress
             wps.setup = WpsInfo.PBC
         }
-        manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() = onLog("Connect request sent")
-            override fun onFailure(reason: Int) = onLog("Connect failed: $reason")
+        mgr.connect(ch, config, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() { onLog("Connect request sent") }
+            override fun onFailure(reason: Int) { onLog("Connect failed: $reason") }
         })
     }
 
     @SuppressLint("MissingPermission")
     fun createGroup() {
-        manager?.createGroup(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() = onLog("Group created (this device is owner)")
-            override fun onFailure(reason: Int) = onLog("Create group failed: $reason")
+        val mgr = manager ?: return
+        val ch = channel ?: return
+        mgr.createGroup(ch, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() { onLog("Group created (this device is owner)") }
+            override fun onFailure(reason: Int) { onLog("Create group failed: $reason") }
         })
     }
 
     @SuppressLint("MissingPermission")
     fun removeGroup() {
-        manager?.removeGroup(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() = onLog("Group removed")
-            override fun onFailure(reason: Int) = onLog("Remove group failed: $reason")
+        val mgr = manager ?: return
+        val ch = channel ?: return
+        mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() { onLog("Group removed") }
+            override fun onFailure(reason: Int) { onLog("Remove group failed: $reason") }
         })
     }
 }
