@@ -48,6 +48,16 @@ class MeshNode(
         onLog("STARTED  IP=${myIp() ?: "?"}  TCP=$tcpPort  UDP=$udpPort")
     }
 
+    // ⬇️ متدی که فراموش شده بود — این بار هست
+    fun connectTo(host: String) {
+        if (peers.add(host)) {
+            onLog("PEER added manually: $host")
+            onPeer(host)
+        } else {
+            onLog("PEER already known: $host")
+        }
+    }
+
     private fun startTcp() {
         pool.execute {
             try {
@@ -101,6 +111,13 @@ class MeshNode(
                 } catch (_: Exception) {}
                 Thread.sleep(2000)
             }
+        }
+    }
+
+    fun pingPeer(host: String, onResult: (Boolean) -> Unit) {
+        pool.execute {
+            val ok = trySend(host, "PING")
+            onResult(ok)
         }
     }
 
