@@ -27,8 +27,11 @@ jobs:
         with:
           gradle-version: '8.5'
 
+      - name: Check ANDROID_HOME
+        run: echo "ANDROID_HOME is $ANDROID_HOME"
+
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
